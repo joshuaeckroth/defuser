@@ -1,18 +1,18 @@
 
-% cards use notation: c(Color,Number)
+% dice use notation: die(Color,Number)
 
-color(c(C,_),C).
-num(c(_,N),N).
+color(die(C,_),C) :- member(C, [r, g, b, u]).
+num(die(_,N),N) :- member(N, [1, 2, 3, 4, 5, 6]).
 
 % color exact match
-colorMatch(c(Color,_), Color).
+colorMatch(die(Color,_), Color).
 % color variable match
-colorMatch(_, "w").
+colorMatch(_, w).
 
 % number exact match
-numMatch(c(_, Number), Number).
+numMatch(die(_, Number), Number).
 % number variable match
-numMatch(_, "#").
+numMatch(_, #).
     
 % exact color and number match for single die
 defused('cn', Color, Number, A) :- color(A, Color), num(A, Number).
@@ -28,40 +28,36 @@ cardString(Constraints) --> "{", exprSeq(Constraints), "}".
 
 exprSeq(Constraints) --> expr(Constraints).
 % comma=and, so constraints come out as a list (Prolog 'and')
-exprSeq([LeftConstraint, RightConstraint]) --> expr(LeftConstraint), ",", exprSeq(RightConstraint).
+exprSeq(Constraints) --> expr(LeftConstraint), ",", exprSeq(RightConstraint), { append(LeftConstraint, RightConstraint, Constraints) }.
 
-expr(Constraints) --> exprTerminal(Constraints).
-expr(equal(LeftConstraint, RightConstraint)) --> exprTerminal(LeftConstraint), "=", exprTerminal(RightConstraint).
-expr([equal(LeftConstraint, MiddleConstraint), equal(MiddleConstraint, RightConstraint)]) --> exprTerminal(LeftConstraint), "=", exprTerminal(MiddleConstraint), "=", exprTerminal(RightConstraint).
-expr(notequal(LeftConstraint, RightConstraint)) --> exprTerminal(LeftConstraint), "!=", exprTerminal(RightConstraint).
-expr(above(LeftConstraint, RightConstraint)) --> exprTerminal(LeftConstraint), "^", exprTerminal(RightConstraint).
+expr([Constraints]) --> exprTerminal(Constraints).
+expr([equal(LeftConstraint, RightConstraint)]) --> exprTerminal(LeftConstraint), "=", exprTerminal(RightConstraint).
+%expr([equal(LeftConstraint, MiddleConstraint), equal(MiddleConstraint, RightConstraint)]) --> exprTerminal(LeftConstraint), "=", exprTerminal(MiddleConstraint), "=", exprTerminal(RightConstraint).
+%expr([notequal(LeftConstraint, RightConstraint)]) --> exprTerminal(LeftConstraint), "!=", exprTerminal(RightConstraint).
+%expr([above(LeftConstraint, RightConstraint)]) --> exprTerminal(LeftConstraint), "^", exprTerminal(RightConstraint).
 
-exprTerminal(c(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
+exprTerminal(die(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
 
-colorTerminal("w") --> "w". % don't care color
-colorTerminal("c") --> "c". % specific but unspecified color
-colorTerminal("b") --> "b". % black
-colorTerminal("r") --> "r". % red
-colorTerminal("g") --> "g". % green
-colorTerminal("u") --> "u". % blue
+colorTerminal(b) --> "b". % black
+colorTerminal(r) --> "r". % red
+colorTerminal(g) --> "g". % green
+colorTerminal(u) --> "u". % blue
+colorTerminal(w) --> "w". % don't care color
+colorTerminal(c) --> "c". % specific but unspecified color
 
-numberTerminal("#") --> "#". % don't care number
-numberTerminal("n") --> "n". % specific but unspecified number
-numberTerminal("1") --> "1".
-numberTerminal("2") --> "2".
-numberTerminal("3") --> "3".
-numberTerminal("4") --> "4".
-numberTerminal("5") --> "5".
-numberTerminal("6") --> "6".
-
-card(c(Color,Number)) :-
-    member(Color, ["w","c","b","r","g","u"]),
-    member(Number, ["#","n","1","2","3","4","5","6"]).
+numberTerminal(1) --> "1".
+numberTerminal(2) --> "2".
+numberTerminal(3) --> "3".
+numberTerminal(4) --> "4".
+numberTerminal(5) --> "5".
+numberTerminal(6) --> "6".
+numberTerminal(#) --> "#". % don't care number
+numberTerminal(n) --> "n". % specific but unspecified number
 
 % e.g.:
-% ?- string_codes("{c#=c#=c#,g4}", X), cardString(Constraints, X, []), constraintsToPredicate(Constraints, Predicate).
-% Constraints = [[equal(c("c", "#"), c("c", "#")), equal(c("c", "#"), c("c", "#"))], c("g", "4")],
-% Predicate = [color(card47, _G2317), color(card48, _G2317), color(card49, _G2335), color(card50, _G2335), colorMatch(card51, "g"), numMatch(card51, "4")] .
+% ?- cardString(Constraints, "{c#=c#=c#,g4}", []), constraintsToPredicate(Constraints, Predicate).
+% Constraints = [[equal(die(c, #), die(c, #)), equal(die(c, #), die(c, #))], die(g, 4)],
+% Predicate = [[[2, defused, 'c#=c#'], [2, defused, 'c#=c#']], [1, defused, cn, g, 4]] ;
 
 constraintsToPredicate([], []).
 constraintsToPredicate([[Constraints]|Tail], [PredHead|PredTail]) :-
@@ -72,11 +68,11 @@ constraintsToPredicate([Card|Tail], [PredHead|PredTail]) :-
     constraintsToPredicate(Tail, PredTail).
 % returned val is [arg-count, pred-name, initial args...]
 % literal card, must match color and number (either/both of which could be variable)
-constraintsToPredicate(c(Color, Number), [1, defused, 'cn', Color, Number]).
+constraintsToPredicate(die(Color, Number), [1, defused, 'cn', Color, Number]).
 % translate equal(...) constraints to defused predicates
-constraintsToPredicate(equal(c("c","#"), c("c","#")), [2, defused, 'c#=c#']).
-constraintsToPredicate(equal(c("w","n"), c("w","n")), [2, defused, 'wn=wn']).
-constraintsToPredicate(equal(c("c","n"), c("c","n")), [2, defused, 'cn=cn']).
+constraintsToPredicate(equal(die(c,#), die(c,#)), [2, defused, 'c#=c#']).
+constraintsToPredicate(equal(die(w,n), die(w,n)), [2, defused, 'wn=wn']).
+constraintsToPredicate(equal(die(c,n), die(c,n)), [2, defused, 'cn=cn']).
 
 % split_at from: https://github.com/mndrix/list_util/blob/master/prolog/list_util.pl
 split_at(N,Xs,Take,Rest) :-
@@ -91,22 +87,33 @@ split_at_([X|Xs], N, [X|Take], Rest) :-
     succ(N0, N),
     split_at_(Xs, N0, Take, Rest).
 
-checkAllPredicates([], _).
+checkAllPredicates([], []). % require no args (dice) left if run out of predicates
 checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
     split_at(ArgCount, Args, ExtraArgs, RestArgs),
+    length(ExtraArgs, ArgCount), % ensure we got enough arguments
     append(InitialArgs, ExtraArgs, GoalArgs),
     Goal =.. [PredName|GoalArgs],
     call(Goal),
     checkAllPredicates(Tail, RestArgs).
 
-% example usage: cardDefused("{g6,cn=cn}", [G,A,c("r",N)]).
-% result: G = c("g", "6"), A = c("r", N)
+% example usage: cardDefused("{g6,cn=cn}", [G,A,die(r,N)]).
+% result:
+% G = die(g, 6),
+% A = die(r, 1),
+% N = 1 ;
+% etc.
 cardDefused(CardString, Dice) :-
-    string_codes(CardString, AsciiCodes),
-    cardString(Constraints, AsciiCodes, []),
-    print(Constraints), nl,
+    cardString(Constraints, CardString, []),
+    print('cardstring: '), format("~s~n", [CardString]),
+    print('constraints: '), print(Constraints), nl,
     constraintsToPredicate(Constraints, Predicates),
-    print(Predicates), nl,
+    print('predicates: '), print(Predicates), nl,
     checkAllPredicates(Predicates, Dice).
 
+% findall([G,A,B], cardDefused("{g6,cn=cn}", [G,A,B]), Solutions), length(Solutions, NumSolutions).
+% Solutions = [[die(g, 6), die(r, 1), die(r, 1)], [die(g, 6), die(r, 2), die(r, 2)], [die(g, 6), die(r, 3), die(r, 3)], [die(g, 6), die(r, 4), die(r, 4)], [die(g, 6), die(r, 5), die(r, 5)], [die(g, 6), die(r, 6), die(..., ...)], [die(g, 6), die(..., ...)|...], [die(..., ...)|...], [...|...]|...],
+% NumSolutions = 24.
+
+% cardDefused(CardString, [die(g,6), die(r,6)]), format("~s~n", [CardString]).
+% prints: {wn=wn}
 
