@@ -1,3 +1,4 @@
+% syntax: https://gist.github.com/Maldaris/eb153bb31104bd76a31706ec42e5d01e
 
 % dice use notation: die(Color,Number)
 
@@ -24,7 +25,7 @@ defused('wn=wn', A, B) :- num(A, Num), num(B, Num).
 % 'equal' case 3: color and number constrained: cn=cn
 defused('cn=cn', A, B) :- color(A, Color), color(B, Color), num(A, Num), num(B, Num).
 
-cardString(Constraints) --> "{", exprSeq(Constraints), "}".
+cardString(Constraints) --> "{", exprSeq(Constraints), "}", { length(Constraints, L), L =< 5 }.
 
 exprSeq(Constraints) --> expr(Constraints).
 % comma=and, so constraints come out as a list (Prolog 'and')
@@ -93,6 +94,7 @@ checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
     length(ExtraArgs, ArgCount), % ensure we got enough arguments
     append(InitialArgs, ExtraArgs, GoalArgs),
     Goal =.. [PredName|GoalArgs],
+    print(Goal), nl,
     call(Goal),
     checkAllPredicates(Tail, RestArgs).
 
@@ -104,8 +106,9 @@ checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
 % etc.
 cardDefused(CardString, Dice) :-
     cardString(Constraints, CardString, []),
-    print('cardstring: '), format("~s~n", [CardString]),
-    print('constraints: '), print(Constraints), nl,
+    %length(Constraints, CLength),
+    %length(Dice, DLength),
+    %CLength =< DLength, % must have equal or fewer constraints than dice (each constraint takes 1+ dice)
     constraintsToPredicate(Constraints, Predicates),
     print('predicates: '), print(Predicates), nl,
     checkAllPredicates(Predicates, Dice).
@@ -116,4 +119,14 @@ cardDefused(CardString, Dice) :-
 
 % cardDefused(CardString, [die(g,6), die(r,6)]), format("~s~n", [CardString]).
 % prints: {wn=wn}
+
+
+% something like this won't work:
+% findall([CardString, N], cardDefused(CardString, [die(g,N), die(r,N)]), Solutions).
+% because even though it will (quickly) find six dice that work with string {wn=wn}, hence six solutions, it won't know that's all there is...
+% unless we can better constrain the parser/predicate-generator to not generate longer strings than required
+% (only have two dice, so at most two predicates?); need to do this at the parser level, if possible, so arbitrarily-long strings are not generated
+% -- perhaps limit size of strings? cards are only so big...
+% ** issue appears when backtracking over exprSeq which has recursive exprSeq on right side; if on left side, would have infinite-recursion on normal parsing, but since it's on the right side, we have infinite recursion on backtracking (unparsing)
+% instead of supporting arbitrary recursion, could specify, say, five different exprSeq rules so it bottoms out
 
