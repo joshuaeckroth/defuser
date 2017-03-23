@@ -10,10 +10,10 @@ gameCard("{cn/w#=cn/w#=cn/w#}", 2).
 gameCard("{w6.w5;w4}", 2). % i.e., 6 and 5 form bottom of pyramid, 4 on top
 gameCard("{w4>wn>wn}", 2).
 gameCard("{w2.w3;w1}", 2).
-gameCard("{rn,w2,kn,w6}", 2).
+gameCard("{rn,w2,kn,w6}", 2). % tested
 gameCard("{kn.kn;w1}", 2).
 gameCard("{wn+wn+wn=11}", 2).
-gameCard("{w6,w5,w1}", 2).
+gameCard("{w6,w5,w1}", 2). % tested
 gameCard("{wn+wn=wn+wn}", 2).
 gameCard("{rn.gn;bn}", 2).
 gameCard("{kn/w1,kn/w2,kn/w3}", 2).
@@ -23,7 +23,7 @@ gameCard("{gn.w3;kn}", 2).
 gameCard("{bn^kn^rn}", 3).
 gameCard("{w3^gn^yn/w1}", 3).
 gameCard("{w1^w2^w3}", 3).
-gameCard("{w#=w#=w#}", 3).
+gameCard("{w#=w#=w#}", 3). % tested
 gameCard("{w5,yn,g2}", 3).
 gameCard("{w3,w5,w4,w3}", 3).
 gameCard("{cn=cn=cn}", 3).
