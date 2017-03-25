@@ -39,23 +39,15 @@ defused('wn-wn=N', N, A, B) :-
     color(A, _), color(B, _),
     num(A, NumA), num(B, NumB), N #= NumA - NumB.
 
-cardString(Constraints) --> "{", exprSeq(Constraints), "}".
+cardString(DiceCount, Constraints) --> "{", exprSeq(DiceCount, Constraints), "}".
 
-% need to explicitly expand all the recursion to be sure we don't generate
-% infinite card strings
-exprSeq(Constraints) --> expr(Constraints).
-exprSeq(Constraints) --> expr(LeftConstraint), ",", exprSeq2(RightConstraint),
+exprSeq(DiceCount, Constraints) --> expr(DiceCount, Constraints).
+exprSeq(DiceCount, Constraints) -->
+    { DiceCountLeft in 1..5,
+      DiceCountRight in 1..5,
+      DiceCount #= DiceCountLeft + DiceCountRight },
+    expr(DiceCountLeft, LeftConstraint), ",", exprSeq(DiceCountRight, RightConstraint),
     { append(LeftConstraint, RightConstraint, Constraints) }.
-exprSeq2(Constraints) --> expr(Constraints).
-exprSeq2(Constraints) --> expr(LeftConstraint), ",", exprSeq3(RightConstraint),
-    { append(LeftConstraint, RightConstraint, Constraints) }.
-exprSeq3(Constraints) --> expr(Constraints).
-exprSeq3(Constraints) --> expr(LeftConstraint), ",", exprSeq4(RightConstraint),
-    { append(LeftConstraint, RightConstraint, Constraints) }.
-exprSeq4(Constraints) --> expr(Constraints).
-exprSeq4(Constraints) --> expr(LeftConstraint), ",", exprSeq5(RightConstraint),
-    { append(LeftConstraint, RightConstraint, Constraints) }.
-exprSeq5(Constraints) --> expr(Constraints).
 
 compatibleConstraint(equal(die(c, n), die(c, n))).
 compatibleConstraint(equal(die(w, #), die(w, #))).
@@ -67,20 +59,20 @@ compatibleConstraint(equal(die(c, #), die(c, #), die(c, #))).
 % currently, only wn+/-wn is support for arithmetic; ultimately should support more
 compatibleArithmeticConstraint(die(w, n), die(w, n)).
 
-expr([equal(LeftDie, RightDie)]) -->
-    exprTerminal(LeftDie), "=", exprTerminal(RightDie),
-    { compatibleConstraint(equal(LeftDie, RightDie)) }.
-expr([equal(LeftDie, MiddleDie, RightDie)]) -->
-    exprTerminal(LeftDie), "=", exprTerminal(MiddleDie), "=", exprTerminal(RightDie),
-    { compatibleConstraint(equal(LeftDie, MiddleDie, RightDie)) }.
-expr([add(LeftDie, RightDie, N)]) -->
-    exprTerminal(LeftDie), "+", exprTerminal(RightDie), "=", arithmeticTerminal(N),
-    { compatibleArithmeticConstraint(LeftDie, RightDie) }.
-expr([subtract(LeftDie, RightDie, N)]) -->
-    exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N),
-    { compatibleArithmeticConstraint(LeftDie, RightDie) }.
+expr(2, [equal(LeftDie, RightDie)]) -->
+    { compatibleConstraint(equal(LeftDie, RightDie)) },
+    exprTerminal(LeftDie), "=", exprTerminal(RightDie).
+expr(3, [equal(LeftDie, MiddleDie, RightDie)]) -->
+    { compatibleConstraint(equal(LeftDie, MiddleDie, RightDie)) },
+    exprTerminal(LeftDie), "=", exprTerminal(MiddleDie), "=", exprTerminal(RightDie).
+expr(2, [add(LeftDie, RightDie, N)]) -->
+    { compatibleArithmeticConstraint(LeftDie, RightDie) },
+    exprTerminal(LeftDie), "+", exprTerminal(RightDie), "=", arithmeticTerminal(N).
+expr(2, [subtract(LeftDie, RightDie, N)]) -->
+    { compatibleArithmeticConstraint(LeftDie, RightDie) },
+    exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N).
 % put this last since it has the most variability (every color/number)
-expr([Constraints]) --> exprTerminal(Constraints).
+expr(1, [Constraints]) --> exprTerminal(Constraints).
 
 exprTerminal(die(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
 
@@ -147,37 +139,42 @@ split_at_([X|Xs], N, [X|Take], Rest) :-
 checkAllPredicates([], []). % require no args (dice) left if run out of predicates
 checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
     split_at(ArgCount, Args, ExtraArgs, RestArgs),
-    length(ExtraArgs, ArgCount), % ensure we got enough arguments
     append(InitialArgs, ExtraArgs, GoalArgs),
     Goal =.. [PredName|GoalArgs],
     call(Goal),
     checkAllPredicates(Tail, RestArgs).
 
 cardDefused(CardString, Dice) :-
-    % somehow use dice count, if provided, to inform Constraints in cardString()?
-    cardString(Constraints, CardString, []),
+    DiceCount in 1..5,
+    length(Dice, DiceCount),
+    cardString(DiceCount, Constraints, CardString, []),
     constraintsToPredicate(Constraints, Predicates),
     checkAllPredicates(Predicates, Dice).
 
 findFDVars([], []).
 findFDVars([die(_, Number)|Dice], [Number|FDVars]) :-
-    fd_var(Number), !, % don't backtrack off this and ignore that it's an fd_var
+    fd_var(Number), !, % don't backtrack off this
     findFDVars(Dice, FDVars).
 findFDVars([_|Dice], FDVars) :-
     findFDVars(Dice, FDVars).
 
-countMultipleDiceSolutions([], 0).
-countMultipleDiceSolutions([Dice|Rest], NumSolutions) :-
-    countDiceSolutions(Dice, HeadSolutions),
-    countMultipleDiceSolutions(Rest, RestSolutions),
-    NumSolutions is HeadSolutions + RestSolutions.
-
 numSolutions(CardString, NumSolutions) :-
     % force CardString to be instantiated first
-    cardString(_, CardString, []),
-    % then count solutions for the CardString
-    aggregate_all(count, (cardDefused(CardString, Dice),
+    cardString(DiceCount, Constraints, CardString, []),
+    constraintsToPredicate(Constraints, Predicates),
+    % generate the right number of Dice
+    length(Dice, DiceCount),
+    % then count solutions for the CardString and Dice
+    aggregate_all(count, (checkAllPredicates(Predicates, Dice),
                           findFDVars(Dice, FDVars),
                           label(FDVars)),
                   NumSolutions).
+
+% run on command line:
+% swipl --traditional -q -s defuser.pl -t enumerateCardStringsAndNumSolutions
+% redirect output to CSV file
+enumerateCardStringsAndNumSolutions :-
+    numSolutions(CardString, NumSolutions),
+    format("\"~s\", ~p~n", [CardString, NumSolutions]),
+    fail.
 

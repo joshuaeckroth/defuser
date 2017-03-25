@@ -7,9 +7,9 @@
 :- [gamecards].
 
 test(cardStringToConstraints, [nondet]) :-
-    cardString([equal(die(c, n), die(c, n)), die(g, 4)],
+    cardString(3, [equal(die(c, n), die(c, n)), die(g, 4)],
         "{cn=cn,g4}", []),
-    cardString([equal(die(c, n), die(c, n), die(c, n))],
+    cardString(3, [equal(die(c, n), die(c, n), die(c, n))],
         "{cn=cn=cn}", []).
 
 test(constraintsToPredicate, [nondet]) :-
@@ -25,11 +25,21 @@ test(cardDefused, [nondet]) :-
     cardDefused("{rn,w2,kn,w6}", [die(r,6), die(r,2), die(k,1), die(g,6)]).
 
 test(numSolutions, [nondet]) :-
+    numSolutions("{g6}", 1),
     numSolutions("{g6,r4}", 1),
     numSolutions("{g6,c#=c#}", 24),
     numSolutions("{w#=w#,cn=cn}", 13824),
     numSolutions("{wn+wn=4}", 48),
     numSolutions("{wn-wn=4}", 32).
+
+% in these tests, we don't care what the generated string is, just that one was
+% found (in finite time)
+test(numSolutionsGenCardString, [nondet]) :-
+    numSolutions(_, 1),
+    numSolutions(_, 24),
+    numSolutions(_, 32),
+    numSolutions(_, 48),
+    numSolutions(_, 13824).
 
 :- end_tests(defuser).
 
