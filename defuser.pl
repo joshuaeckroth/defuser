@@ -51,6 +51,7 @@ exprSeq(DiceCount, Constraints) -->
     { append(LeftConstraint, RightConstraint, Constraints) }.
 
 % ensure proper color/number (only generic variables w and n, not c or #)
+compatibleSingleDie(die(w,n)).
 compatibleSingleDie(D) :- color(D, _), num(D, _).
 compatibleSingleDie(die(w,N)) :- num(N).
 compatibleSingleDie(die(C,n)) :- color(C).
