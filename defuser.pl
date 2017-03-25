@@ -184,6 +184,8 @@ numSolutions(CardString, NumSolutions) :-
 % redirect output to CSV file
 enumerateCardStringsAndNumSolutions :-
     numSolutions(CardString, NumSolutions),
-    format("\"~s\", ~p~n", [CardString, NumSolutions]),
+    % retrieve the dice count
+    cardString(DiceCount, _, CardString, []),
+    format("\"~s\", ~p, ~p~n", [CardString, DiceCount, NumSolutions]),
     fail.
 
