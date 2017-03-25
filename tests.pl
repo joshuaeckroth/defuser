@@ -26,6 +26,8 @@ test(cardDefused, [nondet]) :-
 
 test(numSolutions, [nondet]) :-
     numSolutions("{g6}", 1),
+    numSolutions("{gn}", 6),
+    numSolutions("{w6}", 4),
     numSolutions("{g6,r4}", 1),
     numSolutions("{g6,c#=c#}", 24),
     numSolutions("{w#=w#,cn=cn}", 13824),

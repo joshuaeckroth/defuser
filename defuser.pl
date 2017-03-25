@@ -49,6 +49,11 @@ exprSeq(DiceCount, Constraints) -->
     expr(DiceCountLeft, LeftConstraint), ",", exprSeq(DiceCountRight, RightConstraint),
     { append(LeftConstraint, RightConstraint, Constraints) }.
 
+% ensure proper color/number (only generic variables w and n, not c or #)
+compatibleSingleDie(D) :- color(D, _), num(D, _).
+compatibleSingleDie(die(w,N)) :- num(N).
+compatibleSingleDie(die(C,n)) :- color(C).
+
 compatibleConstraint(equal(die(c, n), die(c, n))).
 compatibleConstraint(equal(die(w, #), die(w, #))).
 compatibleConstraint(equal(die(c, #), die(c, #))).
@@ -72,7 +77,9 @@ expr(2, [subtract(LeftDie, RightDie, N)]) -->
     { compatibleArithmeticConstraint(LeftDie, RightDie) },
     exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N).
 % put this last since it has the most variability (every color/number)
-expr(1, [Constraints]) --> exprTerminal(Constraints).
+expr(1, [Die]) -->
+    { compatibleSingleDie(Die) },
+    exprTerminal(Die).
 
 exprTerminal(die(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
 
