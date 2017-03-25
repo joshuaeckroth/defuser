@@ -45,6 +45,7 @@ exprSeq(DiceCount, Constraints) --> expr(DiceCount, Constraints).
 exprSeq(DiceCount, Constraints) -->
     { DiceCountLeft in 1..5,
       DiceCountRight in 1..5,
+      DiceCount in 1..5,
       DiceCount #= DiceCountLeft + DiceCountRight },
     expr(DiceCountLeft, LeftConstraint), ",", exprSeq(DiceCountRight, RightConstraint),
     { append(LeftConstraint, RightConstraint, Constraints) }.
