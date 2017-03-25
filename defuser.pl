@@ -67,7 +67,6 @@ compatibleConstraint(equal(die(c, #), die(c, #), die(c, #))).
 % currently, only wn+/-wn is support for arithmetic; ultimately should support more
 compatibleArithmeticConstraint(die(w, n), die(w, n)).
 
-expr([Constraints]) --> exprTerminal(Constraints).
 expr([equal(LeftDie, RightDie)]) -->
     exprTerminal(LeftDie), "=", exprTerminal(RightDie),
     { compatibleConstraint(equal(LeftDie, RightDie)) }.
@@ -80,6 +79,8 @@ expr([add(LeftDie, RightDie, N)]) -->
 expr([subtract(LeftDie, RightDie, N)]) -->
     exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N),
     { compatibleArithmeticConstraint(LeftDie, RightDie) }.
+% put this last since it has the most variability (every color/number)
+expr([Constraints]) --> exprTerminal(Constraints).
 
 exprTerminal(die(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
 
@@ -153,6 +154,7 @@ checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
     checkAllPredicates(Tail, RestArgs).
 
 cardDefused(CardString, Dice) :-
+    % somehow use dice count, if provided, to inform Constraints in cardString()?
     cardString(Constraints, CardString, []),
     constraintsToPredicate(Constraints, Predicates),
     checkAllPredicates(Predicates, Dice).
@@ -171,6 +173,9 @@ countMultipleDiceSolutions([Dice|Rest], NumSolutions) :-
     NumSolutions is HeadSolutions + RestSolutions.
 
 numSolutions(CardString, NumSolutions) :-
+    % force CardString to be instantiated first
+    cardString(_, CardString, []),
+    % then count solutions for the CardString
     aggregate_all(count, (cardDefused(CardString, Dice),
                           findFDVars(Dice, FDVars),
                           label(FDVars)),
