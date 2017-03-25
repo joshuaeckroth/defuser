@@ -71,10 +71,10 @@ expr(3, [equal(LeftDie, MiddleDie, RightDie)]) -->
     { compatibleConstraint(equal(LeftDie, MiddleDie, RightDie)) },
     exprTerminal(LeftDie), "=", exprTerminal(MiddleDie), "=", exprTerminal(RightDie).
 expr(2, [add(LeftDie, RightDie, N)]) -->
-    { compatibleArithmeticConstraint(LeftDie, RightDie) },
+    { compatibleArithmeticConstraint(LeftDie, RightDie), N in 2..12 },
     exprTerminal(LeftDie), "+", exprTerminal(RightDie), "=", arithmeticTerminal(N).
 expr(2, [subtract(LeftDie, RightDie, N)]) -->
-    { compatibleArithmeticConstraint(LeftDie, RightDie) },
+    { compatibleArithmeticConstraint(LeftDie, RightDie), N in 0..5 },
     exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N).
 % put this last since it has the most variability (every color/number)
 expr(1, [Die]) -->
@@ -101,7 +101,7 @@ numberTerminal(#) --> "#". % matching number
 
 % only allow 1 or 2 digit numbers
 arithmeticTerminal(N) --> digitnonzero(D), digit(D2),
-    { number_codes(N, [D,D2]), N in 1..18 }.
+    { number_codes(N, [D,D2]) }.
 arithmeticTerminal(N) --> digit(D),
     { number_codes(N, [D]), N in 0..9 }.
 digitnonzero(D) --> [D], { D \= 48, code_type(D, digit) }.
