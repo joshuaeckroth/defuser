@@ -1,35 +1,43 @@
+% constraint logic programming, for cards that use arithmetic
+:- use_module(library(clpfd)).
 
 % run as: swipl --traditional
 
 % dice notation: die(Color,Number)
-color(die(C,_),C) :- member(C, [r, g, b, k]).
-num(die(_,N),N) :- member(N, [1, 2, 3, 4, 5, 6]).
+color(C) :- member(C, [r, g, b, k]).
+color(die(C,_),C) :- color(C).
+num(N) :- member(N, [1, 2, 3, 4, 5, 6]), N in 1..6. % uses clpfd
+num(die(_,N),N) :- num(N).
 
-:- discontiguous defused/4. % defused predicates don't appear in order according to arity
+% defused predicates don't appear in order according to arity
+:- discontiguous defused/3.
+:- discontiguous defused/4.
 
-defused('wn', _, _, _).
-defused('cn', Color, _, A) :-
-    color(A, Color).
-defused('w#', _, Number, A) :-
-    num(A, Number).
-defused('c#', Color, Number, A) :-
-    color(A, Color), num(A, Number).
+defused('wn', die(C, N)) :- color(C), num(N).
+defused('cn', Color, die(Color, N)) :- color(Color), num(N).
+defused('w#', Number, die(C, Number)) :- color(C), num(Number).
+defused('c#', Color, Number, die(Color, Number)) :- color(Color), num(Number).
 
-defused('cn=cn', A, B) :-
-    color(A, Color), color(B, Color).
-defused('w#=w#', A, B) :-
-    num(A, Num), num(B, Num).
-defused('c#=c#', A, B) :-
-    color(A, Color), color(B, Color),
-    num(A, Num), num(B, Num).
+defused('cn=cn', A, B) :- color(A, Color), color(B, Color), num(A, _), num(B, _).
+defused('w#=w#', A, B) :- color(A, _), color(B, _), num(A, Num), num(B, Num).
+defused('c#=c#', A, B) :- color(A, Color), color(B, Color), num(A, Num), num(B, Num).
 
 defused('cn=cn=cn', A, B, C) :-
-    color(A, Color), color(B, Color), color(C, Color).
+    color(A, Color), color(B, Color), color(C, Color),
+    num(A, _), num(B, _), num(C, _).
 defused('w#=w#=w#', A, B, C) :-
+    color(A, _), color(B, _), color(C, _),
     num(A, Num), num(B, Num), num(C, Num).
 defused('c#=c#=c#', A, B, C) :-
     color(A, Color), color(B, Color), color(C, Color),
     num(A, Num), num(B, Num), num(C, Num).
+
+defused('wn+wn=N', N, A, B) :-
+    color(A, _), color(B, _),
+    num(A, NumA), num(B, NumB), N #= NumA + NumB.
+defused('wn-wn=N', N, A, B) :-
+    color(A, _), color(B, _),
+    num(A, NumA), num(B, NumB), N #= NumA - NumB.
 
 cardString(Constraints) --> "{", exprSeq(Constraints), "}".
 
@@ -56,18 +64,22 @@ compatibleConstraint(equal(die(c, n), die(c, n), die(c, n))).
 compatibleConstraint(equal(die(w, #), die(w, #), die(w, #))).
 compatibleConstraint(equal(die(c, #), die(c, #), die(c, #))).
 
+% currently, only wn+/-wn is support for arithmetic; ultimately should support more
+compatibleArithmeticConstraint(die(w, n), die(w, n)).
+
 expr([Constraints]) --> exprTerminal(Constraints).
-expr([equal(LeftConstraint, RightConstraint)]) -->
-    exprTerminal(LeftConstraint), "=", exprTerminal(RightConstraint),
-    { compatibleConstraint(equal(LeftConstraint, RightConstraint)) }.
-expr([equal(LeftConstraint, MiddleConstraint, RightConstraint)]) -->
-    exprTerminal(LeftConstraint), "=", exprTerminal(MiddleConstraint),
-    "=", exprTerminal(RightConstraint),
-    { compatibleConstraint(equal(LeftConstraint, MiddleConstraint, RightConstraint)) }.
-%expr([notequal(LeftConstraint, RightConstraint)]) -->
-%    exprTerminal(LeftConstraint), "!=", exprTerminal(RightConstraint).
-%expr([above(LeftConstraint, RightConstraint)]) -->
-%    exprTerminal(LeftConstraint), "^", exprTerminal(RightConstraint).
+expr([equal(LeftDie, RightDie)]) -->
+    exprTerminal(LeftDie), "=", exprTerminal(RightDie),
+    { compatibleConstraint(equal(LeftDie, RightDie)) }.
+expr([equal(LeftDie, MiddleDie, RightDie)]) -->
+    exprTerminal(LeftDie), "=", exprTerminal(MiddleDie), "=", exprTerminal(RightDie),
+    { compatibleConstraint(equal(LeftDie, MiddleDie, RightDie)) }.
+expr([add(LeftDie, RightDie, N)]) -->
+    exprTerminal(LeftDie), "+", exprTerminal(RightDie), "=", arithmeticTerminal(N),
+    { compatibleArithmeticConstraint(LeftDie, RightDie) }.
+expr([subtract(LeftDie, RightDie, N)]) -->
+    exprTerminal(LeftDie), "-", exprTerminal(RightDie), "=", arithmeticTerminal(N),
+    { compatibleArithmeticConstraint(LeftDie, RightDie) }.
 
 exprTerminal(die(Color, Number)) --> colorTerminal(Color), numberTerminal(Number).
 
@@ -87,6 +99,14 @@ numberTerminal(6) --> "6".
 numberTerminal(n) --> "n". % don't care number
 numberTerminal(#) --> "#". % matching number
 
+% only allow 1 or 2 digit numbers
+arithmeticTerminal(N) --> digitnonzero(D), digit(D2),
+    { number_codes(N, [D,D2]), N in 1..18 }.
+arithmeticTerminal(N) --> digit(D),
+    { number_codes(N, [D]), N in 0..9 }.
+digitnonzero(D) --> [D], { D \= 48, code_type(D, digit) }.
+digit(D) --> [D], { code_type(D, digit) }.
+
 constraintsToPredicate([], []).
 constraintsToPredicate([[Constraints]|Tail], [PredHead|PredTail]) :-
     constraintsToPredicate(Constraints, PredHead),
@@ -95,20 +115,22 @@ constraintsToPredicate([Card|Tail], [PredHead|PredTail]) :-
     constraintsToPredicate(Card, PredHead),
     constraintsToPredicate(Tail, PredTail).
 % returned val is [arg-count, pred-name, initial args...]
-constraintsToPredicate(die(w, n), [1, defused, 'wn', w, n]).
-constraintsToPredicate(die(w, Number), [1, defused, 'w#', w, Number]) :-
+constraintsToPredicate(die(w, n), [1, defused, 'wn']).
+constraintsToPredicate(die(w, Number), [1, defused, 'w#', Number]) :-
     Number \= n.
-constraintsToPredicate(die(Color, n), [1, defused, 'cn', Color, n]) :-
-    Color \= c.
+constraintsToPredicate(die(Color, n), [1, defused, 'cn', Color]) :-
+    Color \= w.
 constraintsToPredicate(die(Color, Number), [1, defused, 'c#', Color, Number]) :-
     Number \= n,
-    Color \= c.
+    Color \= w.
 constraintsToPredicate(equal(die(c,n), die(c,n)), [2, defused, 'cn=cn']).
 constraintsToPredicate(equal(die(w,#), die(w,#)), [2, defused, 'w#=w#']).
 constraintsToPredicate(equal(die(c,#), die(c,#)), [2, defused, 'c#=c#']).
 constraintsToPredicate(equal(die(c,n), die(c,n), die(c,n)), [3, defused, 'cn=cn=cn']).
 constraintsToPredicate(equal(die(w,#), die(w,#), die(w,#)), [3, defused, 'w#=w#=w#']).
 constraintsToPredicate(equal(die(c,#), die(c,#), die(c,#)), [3, defused, 'c#=c#=c#']).
+constraintsToPredicate(add(die(w,n), die(w,n), N), [2, defused, 'wn+wn=N', N]).
+constraintsToPredicate(subtract(die(w,n), die(w,n), N), [2, defused, 'wn-wn=N', N]).
 
 % split_at from: https://github.com/mndrix/list_util/blob/master/prolog/list_util.pl
 split_at(N,Xs,Take,Rest) :-
@@ -135,19 +157,12 @@ cardDefused(CardString, Dice) :-
     constraintsToPredicate(Constraints, Predicates),
     checkAllPredicates(Predicates, Dice).
 
-countDieSolutions(die(Color, Number), 1) :-
-    ground(Color), ground(Number).
-countDieSolutions(die(Color, Number), 6) :-
-    ground(Color), var(Number).
-countDieSolutions(die(Color, Number), 4) :-
-    var(Color), ground(Number).
-
-countDiceSolutions([Die], NumSolutions) :-
-    countDieSolutions(Die, NumSolutions).
-countDiceSolutions([Die|Dice], NumSolutions) :-
-    countDieSolutions(Die, DieSolutions),
-    countDiceSolutions(Dice, RestSolutions),
-    NumSolutions is DieSolutions * RestSolutions.
+findFDVars([], []).
+findFDVars([die(_, Number)|Dice], [Number|FDVars]) :-
+    fd_var(Number), !, % don't backtrack off this and ignore that it's an fd_var
+    findFDVars(Dice, FDVars).
+findFDVars([_|Dice], FDVars) :-
+    findFDVars(Dice, FDVars).
 
 countMultipleDiceSolutions([], 0).
 countMultipleDiceSolutions([Dice|Rest], NumSolutions) :-
@@ -156,6 +171,8 @@ countMultipleDiceSolutions([Dice|Rest], NumSolutions) :-
     NumSolutions is HeadSolutions + RestSolutions.
 
 numSolutions(CardString, NumSolutions) :-
-    setof(Dice, cardDefused(CardString, Dice), Solutions),
-    countMultipleDiceSolutions(Solutions, NumSolutions), !.
+    aggregate_all(count, (cardDefused(CardString, Dice),
+                          findFDVars(Dice, FDVars),
+                          label(FDVars)),
+                  NumSolutions).
 

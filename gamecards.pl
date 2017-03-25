@@ -1,4 +1,4 @@
-gameCard("{w#-w#=2}", 1).
+gameCard("{wn-wn=2}", 1).
 gameCard("{w#=cn/w#=cn}", 1).
 gameCard("{cn/w#=cn/w#}", 1).
 gameCard("{bn/gn,yn/rn,rn/bn}", 1).
