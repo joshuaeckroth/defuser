@@ -25,23 +25,32 @@ test(cardDefused, [nondet]) :-
     cardDefused("{rn,w2,kn,w6}", [die(r,6), die(r,2), die(k,1), die(g,6)]).
 
 test(numSolutions, [nondet]) :-
-    numSolutions("{g6}", 1),
-    numSolutions("{gn}", 6),
-    numSolutions("{w6}", 4),
-    numSolutions("{g6,r4}", 1),
-    numSolutions("{g6,c#=c#}", 24),
-    numSolutions("{w#=w#,cn=cn}", 13824),
-    numSolutions("{wn+wn=4}", 48),
-    numSolutions("{wn-wn=4}", 32).
+    numSolutions("{g6}", [], 1),
+    numSolutions("{gn}", [], 6),
+    numSolutions("{w6}", [], 4),
+    numSolutions("{g6,r4}", [], 1),
+    numSolutions("{g6,c#=c#}", [], 24),
+    numSolutions("{w#=w#,cn=cn}", [], 13824),
+    numSolutions("{wn+wn=4}", [], 48),
+    numSolutions("{wn-wn=4}", [], 32),
+    numSolutions("{c#=c#}", [die(g,6)], 1),
+    numSolutions("{c#=c#}", [die(g,_)], 6),
+    % this next one has 47 solutions: 24 with g6 on left, 24 with g6 on right, minus 1 repeat: g6,g6
+    numSolutions("{wn,wn}", [die(g,6)], 47).
 
 % in these tests, we don't care what the generated string is, just that one was
 % found (in finite time)
 test(numSolutionsGenCardString, [nondet]) :-
-    numSolutions(_, 1),
-    numSolutions(_, 24),
-    numSolutions(_, 32),
-    numSolutions(_, 48),
-    numSolutions(_, 13824).
+    numSolutions(_, [], 1),
+    numSolutions(_, [], 24),
+    numSolutions(_, [], 32),
+    numSolutions(_, [], 48),
+    numSolutions(_, [], 13824).
+
+test(placeDice, [nondet]) :-
+    placeDice([["{g6,wn}", []]], [die(g,6), die(b,2)], [["{g6,wn}", [die(g,6)]]], [die(b,2)]),
+    placeDice([["{g6,wn}", []]], [die(g,6), die(b,2)], [["{g6,wn}", [die(b,2)]]], [die(g,6)]).
+
 
 :- end_tests(defuser).
 

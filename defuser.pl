@@ -1,3 +1,10 @@
+
+%%%% TODO:
+% constrain all dice groundings so at most 6 of each color are used
+% (game contains 6 of each color dice)
+
+:- [split_at].
+
 % constraint logic programming, for cards that use arithmetic
 :- use_module(library(clpfd)).
 
@@ -10,8 +17,7 @@ num(N) :- member(N, [1, 2, 3, 4, 5, 6]), N in 1..6. % uses clpfd
 num(die(_,N),N) :- num(N).
 
 % defused predicates don't appear in order according to arity
-:- discontiguous defused/3.
-:- discontiguous defused/4.
+:- discontiguous defused/3, defused/4.
 
 defused('wn', die(C, N)) :- color(C), num(N).
 defused('cn', Color, die(Color, N)) :- color(Color), num(N).
@@ -103,16 +109,13 @@ numberTerminal(#) --> "#". % matching number
 
 % only allow 1 or 2 digit numbers
 arithmeticTerminal(N) --> digitnonzero(D), digit(D2),
-    { number_codes(N, [D,D2]) }.
+    { number_codes(N, [D,D2]), N in 0..18 }.
 arithmeticTerminal(N) --> digit(D),
     { number_codes(N, [D]), N in 0..9 }.
-digitnonzero(D) --> [D], { D \= 48, code_type(D, digit) }.
+digitnonzero(D) --> [D], { code_type(D, digit), D \= 48 }.
 digit(D) --> [D], { code_type(D, digit) }.
 
 constraintsToPredicate([], []).
-constraintsToPredicate([[Constraints]|Tail], [PredHead|PredTail]) :-
-    constraintsToPredicate(Constraints, PredHead),
-    constraintsToPredicate(Tail, PredTail).
 constraintsToPredicate([Card|Tail], [PredHead|PredTail]) :-
     constraintsToPredicate(Card, PredHead),
     constraintsToPredicate(Tail, PredTail).
@@ -134,17 +137,6 @@ constraintsToPredicate(equal(die(c,#), die(c,#), die(c,#)), [3, defused, 'c#=c#=
 constraintsToPredicate(add(die(w,n), die(w,n), N), [2, defused, 'wn+wn=N', N]).
 constraintsToPredicate(subtract(die(w,n), die(w,n), N), [2, defused, 'wn-wn=N', N]).
 
-% split_at from: https://github.com/mndrix/list_util/blob/master/prolog/list_util.pl
-split_at(N,Xs,Take,Rest) :-
-    split_at_(Xs,N,Take,Rest).
-split_at_(Rest, 0, [], Rest) :- !. % optimization
-split_at_([], N, [], []) :-
-    N > 0.
-split_at_([X|Xs], N, [X|Take], Rest) :-
-    N > 0,
-    succ(N0, N),
-    split_at_(Xs, N0, Take, Rest).
-
 checkAllPredicates([], []). % require no args (dice) left if run out of predicates
 checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
     split_at(ArgCount, Args, ExtraArgs, RestArgs),
@@ -155,10 +147,20 @@ checkAllPredicates([[ArgCount,PredName|InitialArgs]|Tail], Args) :-
 
 cardDefused(CardString, Dice) :-
     DiceCount in 1..5,
-    length(Dice, DiceCount),
     cardString(DiceCount, Constraints, CardString, []),
     constraintsToPredicate(Constraints, Predicates),
     checkAllPredicates(Predicates, Dice).
+
+placeDice([], AvailableDice, [], AvailableDice). % allow leftover dice
+placeDice([[PCard,PDice]|PCards], AvailableDice, [[PCard,[Die|PDice]]|UpdatedPCards], FinalDice) :-
+    % non-deterministically select a die to attempt to place
+    select(Die, AvailableDice, RemainingDice),
+    % find a winning set of dice for this card
+    cardDefused(PCard, SufficientPDice),
+    % ensure die under consideration and all player dice are used
+    intersection(SufficientPDice, [Die|PDice], [Die|PDice]),
+    % find solutions for rest of the cards
+    placeDice(PCards, RemainingDice, UpdatedPCards, FinalDice).
 
 findFDVars([], []).
 findFDVars([die(_, Number)|Dice], [Number|FDVars]) :-
@@ -167,7 +169,7 @@ findFDVars([die(_, Number)|Dice], [Number|FDVars]) :-
 findFDVars([_|Dice], FDVars) :-
     findFDVars(Dice, FDVars).
 
-numSolutions(CardString, NumSolutions) :-
+numSolutions(CardString, PartialDice, NumSolutions) :-
     % force CardString to be instantiated first
     cardString(DiceCount, Constraints, CardString, []),
     constraintsToPredicate(Constraints, Predicates),
@@ -176,14 +178,15 @@ numSolutions(CardString, NumSolutions) :-
     % then count solutions for the CardString and Dice
     aggregate_all(count, (checkAllPredicates(Predicates, Dice),
                           findFDVars(Dice, FDVars),
-                          label(FDVars)),
+                          label(FDVars),
+                          intersection(PartialDice, Dice, PartialDice)),
                   NumSolutions).
 
 % run on command line:
 % swipl --traditional -q -s defuser.pl -t enumerateCardStringsAndNumSolutions
 % redirect output to CSV file
 enumerateCardStringsAndNumSolutions :-
-    numSolutions(CardString, NumSolutions),
+    numSolutions(CardString, [], NumSolutions),
     % retrieve the dice count
     cardString(DiceCount, _, CardString, []),
     format("\"~s\", ~p, ~p~n", [CardString, DiceCount, NumSolutions]),
