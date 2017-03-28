@@ -6,6 +6,7 @@
 :- use_module(library(http/json_convert)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_error)).
+:- use_module(library(http/http_log)).
 
 :- [defuser].
 
@@ -40,6 +41,7 @@ vars_to_varnames(Args, VarNames) :-
 handle(Request) :-
     http_read_json(Request, JSONIn),
     json_to_prolog(JSONIn, [Pred|Args]),
+    http_log("~p~n", [[Pred|Args]]),
     maplist(read_term_from_atom, Args, ArgsTerms),
     member(Pred, [numSolutions, cardDefused, placeDice]),
     term_variables(ArgsTerms, Vars),
