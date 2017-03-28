@@ -16,13 +16,37 @@ server(Port) :- http_server(http_dispatch, [port(Port)]).
 read_term_from_atom([],[]). % need special case for empty list
 read_term_from_atom(A,T) :- read_term_from_atom(A,T,[]).
 
+term_to_dict([], [], Pairs, Dict) :-
+    dict_pairs(Dict, _, Pairs).
+term_to_dict([VarAtom|VarsAtoms], [Var|Vars], Pairs, Dict) :-
+    term_string(Var, VarStr),
+    term_to_dict(VarsAtoms, Vars, [VarAtom-VarStr|Pairs], Dict).
+
+join_args([Arg], Arg).
+join_args([Arg|Args], Out) :-
+    join_args(Args, Rest),
+    string_concat(Arg, ',', ArgComma),
+    string_concat(ArgComma, Rest, Out), !.
+
+extract_vnames([],[]).
+extract_vnames([=(VName,_)|Rest], [VName|VNamesRest]) :-
+    extract_vnames(Rest, VNamesRest).
+
+vars_to_varnames(Args, VarNames) :-
+    join_args(Args, Joined),
+    term_string(_, Joined, [variable_names(VNames)]),
+    extract_vnames(VNames, VarNames).
+
 handle(Request) :-
     http_read_json(Request, JSONIn),
     json_to_prolog(JSONIn, [Pred|Args]),
     maplist(read_term_from_atom, Args, ArgsTerms),
     member(Pred, [numSolutions, cardDefused, placeDice]),
-    aggregate_all(set([Pred|ArgsTerms]), (Goal =.. [Pred|ArgsTerms], call(Goal)), Results),
-    maplist(maplist(term_to_atom), Results, Output),
-    prolog_to_json(Output, JSONOut),
-    reply_json(JSONOut).
+    term_variables(ArgsTerms, Vars),
+    vars_to_varnames(Args, VarNames),
+    aggregate_all(set(Dict), (Goal =.. [Pred|ArgsTerms],
+                              call(Goal),
+                              term_to_dict(VarNames, Vars, [], Dict)),
+                  Results),
+    reply_json_dict(Results).
 
