@@ -11,7 +11,7 @@
 
 server(Port) :- http_server(http_dispatch, [port(Port)]).
 
-:- http_handler('/api', handle, []).
+:- http_handler('/api', handle, [time_limit(30)]).
 
 read_term_from_atom([],[]). % need special case for empty list
 read_term_from_atom(A,T) :- read_term_from_atom(A,T,[]).
