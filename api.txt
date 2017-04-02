@@ -1,0 +1,36 @@
+curl -X "POST" "http://defuser.artifice.cc:9001/api" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -d $'[
+  "cardDefused",
+  "\\"{wn,wn}\\"",
+  "[die(g,6),die(g,X)]"
+]'
+
+curl -X "POST" "http://defuser.artifice.cc:9001/api" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -d $'[
+  "cardDefused",
+  "\\"{wn,wn}\\"",
+  "D"
+]'
+
+curl -X "POST" "http://defuser.artifice.cc:9001/api" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -d $'[
+  "numSolutions",
+  "\\"{wn,wn}\\"",
+  "[]",
+  "NS"
+]'
+
+curl -X "POST" "http://defuser.artifice.cc:9001/api" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -d $'[
+  "placeDice",
+  "[[\\"{wn,wn}\\",[die(g,6)]]]",
+  "[die(b,2)]",
+  "NewCards",
+  "[]"
+]'
+
+

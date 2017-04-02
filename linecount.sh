@@ -1,4 +1,4 @@
 #!/bin/sh
 
-grep -v '^%' defuser.pl | grep . | wc -l
+grep -v '^%' $1 | grep . | wc -l
 

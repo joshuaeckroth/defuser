@@ -176,13 +176,11 @@ numSolutions(CardString, PartialDice, NumSolutions) :-
                           intersection(PartialDice, Dice, PartialDice)),
                   NumSolutions).
 
-% run on command line:
-% swipl --traditional -q -s defuser.pl -t enumerateCardStringsAndNumSolutions
-% redirect output to CSV file
-enumerateCardStringsAndNumSolutions :-
-    numSolutions(CardString, [], NumSolutions),
-    % retrieve the dice count
-    cardString(DiceCount, _, CardString, []),
-    format("\"~s\", ~p, ~p~n", [CardString, DiceCount, NumSolutions]),
-    fail.
+% queries:
+% X in 1..6, findFDVars([die(g, X)], Vars), label(Vars).
+% numSolutions("{w#=w#}", [], NS).
+% numSolutions("{w#=w#,gn,w3}", [], NS).
+% numSolutions("{w#=w#,gn,w3}", [die(g,6)], NS).
+% numSolutions(CS, [], 96), format("~s~n", [CS]).
+% numSolutions(CS, [], 24), format("~s~n", [CS]).
 

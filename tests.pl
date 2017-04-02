@@ -48,9 +48,7 @@ test(numSolutionsGenCardString, [nondet]) :-
     numSolutions(_, [], 13824).
 
 test(placeDice, [nondet]) :-
-    placeDice([["{g6,wn}", []]], [die(g,6), die(b,2)], [["{g6,wn}", [die(g,6)]]], [die(b,2)]),
-    placeDice([["{g6,wn}", []]], [die(g,6), die(b,2)], [["{g6,wn}", [die(b,2)]]], [die(g,6)]).
-
+    placeDice([["{g6,wn}", []]], [die(g,6), die(b,2)], [["{g6,wn}", [die(g,6), die(b,2)]]], []).
 
 :- end_tests(defuser).
 

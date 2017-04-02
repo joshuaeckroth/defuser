@@ -177,7 +177,7 @@ numSolutions(CardString, PartialDice, NumSolutions) :-
                   NumSolutions).
 
 % run on command line:
-% swipl --traditional -q -s defuser.pl -t enumerateCardStringsAndNumSolutions
+% swipl --traditional -q -s step9.pl -t enumerateCardStringsAndNumSolutions
 % redirect output to CSV file
 enumerateCardStringsAndNumSolutions :-
     numSolutions(CardString, [], NumSolutions),
@@ -185,4 +185,9 @@ enumerateCardStringsAndNumSolutions :-
     cardString(DiceCount, _, CardString, []),
     format("\"~s\", ~p, ~p~n", [CardString, DiceCount, NumSolutions]),
     fail.
+
+% ultimately, 57,087,791 card strings
+
+
+
 

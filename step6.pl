@@ -104,8 +104,10 @@ numberTerminal(n) --> "n". % don't care number
 numberTerminal(#) --> "#". % matching number
 
 % only allow 1 or 2 digit numbers
-arithmeticTerminal(N) --> digitnonzero(D), digit(D2), { number_codes(N, [D,D2]), N in 0..18 }.
-arithmeticTerminal(N) --> digit(D), { number_codes(N, [D]), N in 0..9 }.
+arithmeticTerminal(N) --> digitnonzero(D), digit(D2),
+    { number_codes(N, [D,D2]), N in 0..18 }.
+arithmeticTerminal(N) --> digit(D),
+    { number_codes(N, [D]), N in 0..9 }.
 digitnonzero(D) --> [D], { code_type(D, digit), D \= 48 }.
 digit(D) --> [D], { code_type(D, digit) }.
 
@@ -115,9 +117,13 @@ constraintsToPredicate([Card|Tail], [PredHead|PredTail]) :-
     constraintsToPredicate(Tail, PredTail).
 % returned val is [arg-count, pred-name, initial args...]
 constraintsToPredicate(die(w, n), [1, defused, 'wn']).
-constraintsToPredicate(die(w, Number), [1, defused, 'w#', Number]) :- Number \= n.
-constraintsToPredicate(die(Color, n), [1, defused, 'cn', Color]) :- Color \= w.
-constraintsToPredicate(die(Color, Number), [1, defused, 'c#', Color, Number]) :- Number \= n, Color \= w.
+constraintsToPredicate(die(w, Number), [1, defused, 'w#', Number]) :-
+    Number \= n.
+constraintsToPredicate(die(Color, n), [1, defused, 'cn', Color]) :-
+    Color \= w.
+constraintsToPredicate(die(Color, Number), [1, defused, 'c#', Color, Number]) :-
+    Number \= n,
+    Color \= w.
 constraintsToPredicate(equal(die(c,n), die(c,n)), [2, defused, 'cn=cn']).
 constraintsToPredicate(equal(die(w,#), die(w,#)), [2, defused, 'w#=w#']).
 constraintsToPredicate(equal(die(c,#), die(c,#)), [2, defused, 'c#=c#']).
@@ -141,48 +147,10 @@ cardDefused(CardString, Dice) :-
     constraintsToPredicate(Constraints, Predicates),
     checkAllPredicates(Predicates, Dice).
 
-placeDice([], AvailableDice, [], AvailableDice). % allow leftover dice
-placeDice([[PCard,PDice]|PCards], AvailableDice, UpdatedPCards, FinalDice) :-
-    % find a winning set of dice for this card
-    cardDefused(PCard, SufficientPDice),
-    % non-deterministically select a die to attempt to place
-    select(Die, AvailableDice, RemainingDice),
-    % ensure die under consideration and all existing dice are used
-    intersection(SufficientPDice, [Die|PDice], [Die|PDice]),
-    % find solutions after placing this die
-    placeDice([[PCard,[Die|PDice]]|PCards], RemainingDice, UpdatedPCards, FinalDice).
-placeDice([[PCard,PDice]|PCards], AvailableDice, [[PCard,PDice]|UpdatedPCards], FinalDice) :-
-    % card is fully defused, and can be removed
-    cardDefused(PCard, PDice),
-    % find solutions for rest of the cards
-    placeDice(PCards, AvailableDice, UpdatedPCards, FinalDice).
-
-findFDVars([], []).
-findFDVars([die(_, Number)|Dice], [Number|FDVars]) :-
-    fd_var(Number), !, % don't backtrack off this
-    findFDVars(Dice, FDVars).
-findFDVars([_|Dice], FDVars) :- findFDVars(Dice, FDVars).
-
-numSolutions(CardString, PartialDice, NumSolutions) :-
-    % force CardString to be instantiated first
-    cardString(DiceCount, Constraints, CardString, []),
-    constraintsToPredicate(Constraints, Predicates),
-    % generate the right number of Dice
-    length(Dice, DiceCount),
-    % then count solutions for the CardString and Dice
-    aggregate_all(count, (checkAllPredicates(Predicates, Dice),
-                          findFDVars(Dice, FDVars),
-                          label(FDVars),
-                          intersection(PartialDice, Dice, PartialDice)),
-                  NumSolutions).
-
-% run on command line:
-% swipl --traditional -q -s defuser.pl -t enumerateCardStringsAndNumSolutions
-% redirect output to CSV file
-enumerateCardStringsAndNumSolutions :-
-    numSolutions(CardString, [], NumSolutions),
-    % retrieve the dice count
-    cardString(DiceCount, _, CardString, []),
-    format("\"~s\", ~p, ~p~n", [CardString, DiceCount, NumSolutions]),
-    fail.
+% queries:
+% cardDefused("{w#=w#}", [die(g,6),die(r,6)]).
+% cardDefused("{w#=w#}", [die(g,6),die(r,X)]).
+% cardDefused("{w#=w#}", [die(C,6),die(r,X)]).
+% cardDefused("{w#=w#}", D).
+% cardDefused(CS, [die(C,6),die(r,X)]), format("~s~n", [CS]).
 
